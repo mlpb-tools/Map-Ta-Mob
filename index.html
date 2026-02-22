@@ -1,910 +1,600 @@
 <!doctype html>
 <html lang="fr" class="h-full">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Map Ta Mob - V63 (Pan & Zoom)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Map Ta Mobilité - V72</title>
+    
+    <!-- Typographies -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;900&family=Mulish:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS pour la vraie carte -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Typographies -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;900&family=Mulish:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Outils PDF et Markdown -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root {
+            --c-orange: #f39200;  
+            --c-green: #95c11f;   
+            --c-blue: #2897d5;    
+            --c-pink: #d60b52;    
+            --c-purple: #a3195b;  
+            --c-red: #9f3d3f;     
+            --c-black: #171718;   
+            --c-white: #ffffff;
+            --c-light-grey: #f8f9fa;
+        }
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+        body { font-family: 'Mulish', sans-serif; color: var(--c-black); background-color: #e2e8f0; overscroll-behavior: none; }
+        h1, h2, h3, .title-font { font-family: 'Barlow Condensed', sans-serif; }
 
-  <style>
-    :root {
-      --c-orange: #f39200;
-      --c-green: #95c11f;
-      --c-blue: #2897d5;
-      --c-pink: #d60b52;
-      --c-purple: #a3195b;
-      --c-red: #9f3d3f;
-      --c-black: #171718;
-      --c-white: #ffffff;
-      --c-light-grey: #f8f9fa;
-    }
+        /* HEADER */
+        header { height: 60px; background: var(--c-white); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 100; position: relative; }
 
-    body {
-      font-family: 'Mulish', sans-serif;
-      color: var(--c-black);
-      background-color: #f0f2f5;
-      overscroll-behavior: none;
-    }
+        /* BOUTONS GLOBAUX */
+        .btn-mlpb {
+            background: var(--c-white); border: 1px solid #e2e8f0; color: var(--c-black);
+            font-weight: 700; text-transform: uppercase; border-radius: 9999px; padding: 8px 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.5px; text-decoration: none;
+        }
+        .btn-mlpb:hover { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-color: var(--c-blue); color: var(--c-blue); }
+        .btn-primary { background: var(--c-blue); color: white; border: none; }
+        .btn-primary:hover { background: #1e7bb3; color: white; }
 
-    h1, h2, h3, .title-font { font-family: 'Barlow Condensed', sans-serif; }
+        /* --- MAP STAGE (PLEIN ECRAN) --- */
+        .map-stage { position: relative; flex: 1; overflow: hidden; background: #cbd5e1; display: flex; align-items: center; justify-content: center; }
 
-    .btn-mlpb {
-      background: var(--c-white);
-      border: 1px solid #e2e8f0;
-      color: var(--c-black);
-      font-weight: 700;
-      text-transform: uppercase;
-      border-radius: 9999px;
-      padding: 8px 16px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      transition: all 0.2s ease;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      letter-spacing: 0.5px;
-      text-decoration: none;
-      user-select: none;
-    }
-    .btn-mlpb:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      border-color: var(--c-blue);
-      color: var(--c-blue);
-    }
+        #board-container { 
+            width: 100%; height: 100%; 
+            position: relative; overflow: hidden; 
+        }
 
-    .btn-primary { background: var(--c-blue); color: white; border: none; }
-    .btn-primary:hover { background: #1e7bb3; color: white; }
+        /* Container Leaflet */
+        #leaflet-map {
+            width: 100%; height: 100%; z-index: 1; background: #e2e8f0;
+        }
+        
+        /* Fallback Image Layer (Si import manuel) */
+        #user-map-img { 
+            width: 100%; height: 100%; object-fit: contain; pointer-events: none; z-index: 5; position: absolute; top:0; left:0; 
+        }
 
-    header {
-      height: 60px;
-      background: var(--c-white);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0 20px;
-      z-index: 50; position: relative;
-    }
+        /* --- LEAFLET CUSTOM STYLES --- */
+        .custom-div-icon { background: transparent; border: none; }
 
-    .cockpit-container { display:flex; height: calc(100vh - 60px); overflow:hidden; gap:0; }
+        /* --- PANNEAUX FLOTTANTS (GLASSMORPHISM) --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border-radius: 16px; pointer-events: auto;
+        }
 
-    .sidebar-left {
-      width: 260px;
-      background: var(--c-white);
-      display: flex;
-      flex-direction: row;
-      flex-shrink: 0;
-      box-shadow: 2px 0 5px rgba(0,0,0,0.02);
-      z-index: 20;
-    }
+        /* --- NAVIGATION GAUCHE --- */
+        .nav-column { display: flex; flex-direction: column; align-items: center; padding: 10px 5px; gap: 8px; width: 60px; }
+        .nav-btn {
+            width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; 
+            color: #64748b; cursor: pointer; transition: all 0.2s; font-size: 20px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .nav-btn:hover { transform: scale(1.1); color: var(--c-blue); }
+        .nav-btn.active { color: white; transform: scale(1.1); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        .nav-btn[data-cat="lieux"].active { background: var(--c-red); }
+        .nav-btn[data-cat="transports"].active { background: var(--c-blue); }
+        .nav-btn[data-cat="pro"].active { background: var(--c-orange); }
+        .nav-btn[data-cat="demarches"].active { background: var(--c-purple); }
+        .nav-btn[data-cat="loisirs"].active { background: var(--c-pink); }
+        .nav-btn[data-cat="mespass"].active { background: var(--c-black); }
 
-    .nav-column {
-      width: 70px;
-      background: var(--c-light-grey);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding-top: 10px;
-      border-right: 1px solid #eee;
-    }
+        /* OUTILS */
+        .tools-column { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: transparent; }
+        .tools-header { padding: 20px; font-size: 18px; font-weight: 700; text-transform: uppercase; color: var(--c-black); font-family: 'Barlow Condensed', sans-serif; border-bottom: 1px solid #e2e8f0; }
+        .tools-grid { display: flex; flex-direction: column; gap: 6px; padding: 10px; overflow-y: auto; }
+        .tool-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 10px; cursor: pointer; transition: all 0.2s; font-size: 11px; font-weight: 700; color: #334155; }
+        .tool-item:hover { border-color: var(--c-blue); transform: translateX(4px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .border-l-4 { border-left-width: 4px; }
+        
+        .tool-highlight { background: linear-gradient(135deg, var(--c-blue) 0%, #1e7bb3 100%) !important; color: white !important; border: none !important; justify-content: center; box-shadow: 0 4px 10px rgba(40, 151, 213, 0.3); }
 
-    .nav-btn {
-      width: 50px; height: 50px;
-      margin-bottom: 10px;
-      border-radius: 12px;
-      display:flex; align-items:center; justify-content:center;
-      color:#64748b;
-      cursor:pointer;
-      transition: all .2s;
-      font-size: 22px;
-      background:white;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      user-select:none;
-    }
-    .nav-btn:hover { transform: scale(1.05); color: var(--c-blue); }
-    .nav-btn.active { background: var(--c-blue); color:white; box-shadow: 0 4px 6px rgba(40,151,213,.3); }
-    .nav-btn[data-cat="lieux"].active { background: var(--c-red); box-shadow: 0 4px 6px rgba(159,61,63,.3); }
-    .nav-btn[data-cat="transports"].active { background: var(--c-blue); }
-    .nav-btn[data-cat="pro"].active { background: var(--c-orange); box-shadow: 0 4px 6px rgba(243,146,0,.3); }
-    .nav-btn[data-cat="demarches"].active { background: var(--c-purple); box-shadow: 0 4px 6px rgba(163,25,91,.3); }
-    .nav-btn[data-cat="loisirs"].active { background: var(--c-pink); box-shadow: 0 4px 6px rgba(214,11,82,.3); }
-    .nav-btn[data-cat="freins"].active { background: var(--c-black); }
+        /* --- STICKERS --- */
+        .bubble-container {
+            position: relative; background: white; border-radius: 50%;
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .bubble-container:hover { transform: scale(1.1); }
+        
+        .bubble-lieu { background: var(--c-red); color: white; }
+        .bubble-transport { background: var(--c-blue); color: white; }
+        .bubble-pro { background: var(--c-orange); color: white; }
+        .bubble-admin { background: var(--c-purple); color: white; }
+        .bubble-loisir { background: var(--c-pink); color: white; }
+        .bubble-mespass { background: var(--c-black); color: white; }
 
-    .tools-column { flex:1; display:flex; flex-direction:column; overflow:hidden; background:white; }
-    .tools-header {
-      padding: 20px;
-      font-size: 18px; font-weight:700; text-transform:uppercase;
-      color: var(--c-black);
-      font-family: 'Barlow Condensed', sans-serif;
-      border-bottom: 1px solid #f0f0f0;
-    }
+        .sticker-emoji { font-size: 20px; line-height: 1; }
+        .sticker-label {
+            margin-top: 6px; background: rgba(255, 255, 255, 0.95); padding: 4px 10px; border-radius: 12px;
+            font-size: 11px; font-weight: 800; color: #1e293b; text-align: center;
+            white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);
+        }
 
-    .tool-item{
-      margin: 0 15px 10px 15px;
-      padding: 10px 15px;
-      background:white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      display:flex; align-items:center; gap:12px;
-      cursor:pointer; transition: all .2s;
-      font-size: 13px; font-weight:600; color:#334155;
-      user-select:none;
-    }
-    .tool-item:hover { border-color: var(--c-blue); background:#f8fafc; transform: translateX(2px); }
-    .border-l-4 { border-left-width:4px; }
+        .sticker-input {
+            margin-top: 6px; background: white; padding: 4px 8px; border-radius: 8px;
+            border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; text-align: center; width: 100px;
+            outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .sticker-input:focus { border-color: var(--c-blue); }
 
-    .tool-highlight{
-      background: linear-gradient(135deg, var(--c-blue) 0%, #1e7bb3 100%) !important;
-      color:white !important;
-      border:none !important;
-      justify-content:center;
-      text-align:center;
-      box-shadow: 0 4px 10px rgba(40,151,213,.3);
-    }
-    .tool-highlight:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 12px rgba(40,151,213,.4) !important; }
+        .delete-btn { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; opacity: 0; transform: scale(0.8); transition: all 0.2s; border: 2px solid white; z-index: 20; }
+        .group:hover .delete-btn { opacity: 1; transform: scale(1); }
 
-    .map-stage { flex:1; position:relative; overflow:hidden; background:#e5e7eb; display:flex; align-items:center; justify-content:center; }
-    #board-container{
-      width:100%; height:100%;
-      background:white;
-      position:relative; overflow:hidden;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
-    }
+        /* LIBRARY GRID */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: white; width: 95%; max-width: 900px; max-height: 85vh; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        
+        .library-grid { padding: 30px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px; overflow-y: auto; background: #f8fafc; flex: 1; }
+        .map-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: all 0.3s; cursor: pointer; border: 1px solid transparent; position: relative; }
+        .map-card:hover { transform: translateY(-5px); border-color: var(--c-orange); }
+        .map-thumb { height: 140px; background: #e2e8f0; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
+        .map-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        .map-card:hover img { transform: scale(1.05); }
+        .map-fallback { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #f0f2f5 0%, #dbeafe 100%); color: #64748b; text-align: center; padding: 10px; }
+        .map-fallback-icon { font-size: 32px; margin-bottom: 5px; }
+        .map-overlay-title { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.75); color: white; padding: 8px 10px; font-family: 'Barlow Condensed'; font-size: 14px; font-weight: 700; text-transform: uppercase; text-align: center; backdrop-filter: blur(2px); z-index: 10; }
+        .map-info { padding: 10px; display: flex; justify-content: center; }
+        .map-tag { display: inline-block; padding: 2px 10px; background: #e0f2fe; color: var(--c-blue); border-radius: 10px; font-size: 10px; font-weight: 700; }
 
-    /* IMPORTANT: couche transformée = pan + zoom */
-    #map-transform-layer{
-      width:100%; height:100%;
-      position:relative;
-      transform-origin: center;
-      display:flex; align-items:center; justify-content:center;
-      cursor: grab;
-      user-select: none;
-      touch-action: none; /* utile si on ajoute pan tactile */
-    }
-    #user-map-img{ width:100%; height:100%; object-fit:contain; pointer-events:none; }
+        .input-mlpb { width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: 'Mulish'; font-size: 14px; outline: none; }
+        .input-mlpb:focus { border-color: var(--c-blue); ring: 2px solid var(--c-blue); }
 
-    /* Stickers */
-    .draggable{
-      position:absolute; z-index:100;
-      transform: translate(-50%, -100%);
-      display:flex; flex-direction:column; align-items:center;
-      cursor: grab;
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
-      transition: transform 0.1s;
-      pointer-events:auto;
-      user-select:none;
-    }
-    .draggable:active { cursor: grabbing; transform: translate(-50%, -100%) scale(1.1); z-index:150; }
+        .zoom-controls { position: absolute; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
+        .zoom-btn { width: 44px; height: 44px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--c-black); box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s; border: 1px solid #e2e8f0; }
+        .zoom-btn:hover { background: var(--c-light-grey); transform: scale(1.05); }
 
-    .bubble-container{
-      position:relative;
-      border-radius:50%;
-      width:40px; height:40px;
-      display:flex; align-items:center; justify-content:center;
-      border: 2px solid white;
-      background:white;
-    }
-    .bubble-lieu{ background: var(--c-red); color:white; }
-    .bubble-transport{ background: var(--c-blue); color:white; }
-    .bubble-pro{ background: var(--c-orange); color:white; }
-    .bubble-admin{ background: var(--c-purple); color:white; }
-    .bubble-loisir{ background: var(--c-pink); color:white; }
-    .bubble-frein{ background: var(--c-black); color:white; }
+        /* SCROLLBAR CUSTOM */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-    .sticker-emoji{ font-size:20px; line-height:1; }
+        .leaflet-control-zoom { border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; border-radius: 12px !important; overflow: hidden; }
+        .leaflet-control-zoom a { color: var(--c-black) !important; }
+        .leaflet-control-attribution { font-size: 8px !important; background: rgba(255,255,255,0.7) !important; }
 
-    .sticker-label{
-      margin-top:6px;
-      background: rgba(255,255,255,0.95);
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px; font-weight:700;
-      color: #1e293b;
-      text-align:center;
-      white-space: pre-wrap;
-      max-width: 140px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      border: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .sticker-input{
-      margin-top:6px;
-      background:white;
-      padding:4px 8px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      font-size: 11px;
-      text-align:center;
-      width: 110px;
-      outline:none;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .sticker-input:focus { border-color: var(--c-blue); }
-
-    .delete-btn{
-      position:absolute;
-      top:-5px; right:-5px;
-      width:18px; height:18px;
-      background:#ef4444;
-      color:white;
-      border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      font-size:12px; font-weight:bold;
-      cursor:pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      opacity:0;
-      transform: scale(0.8);
-      transition: all .2s;
-      border: 2px solid white;
-    }
-    .draggable:hover .delete-btn{ opacity:1; transform: scale(1); }
-
-    /* Sidebar droite */
-    .sidebar-right{
-      width:200px;
-      background: var(--c-white);
-      border-left: 1px solid #eee;
-      display:flex; flex-direction:column;
-      z-index:20;
-    }
-    .resources-header{
-      padding: 20px;
-      background: var(--c-white);
-      color: var(--c-black);
-      font-family: 'Barlow Condensed';
-      font-weight:700; font-size:16px; text-transform: uppercase;
-      border-bottom: 2px solid var(--c-orange);
-      text-align:center;
-    }
-    .resource-item{
-      display:flex; align-items:center; gap:10px;
-      padding: 12px 15px;
-      border-bottom: 1px solid #f8f9fa;
-      cursor:pointer; transition: all .2s;
-      font-size: 12px; font-weight:600; color:#475569;
-      user-select:none;
-    }
-    .resource-item:hover { background:#f0f9ff; padding-left:20px; color: var(--c-blue); }
-    .res-icon{ font-size:18px; width:24px; text-align:center; }
-
-    /* Zoom controls */
-    .zoom-controls{ position:absolute; bottom:30px; left:30px; display:flex; flex-direction:column; gap:8px; z-index:50; }
-    .zoom-btn{
-      width:44px; height:44px;
-      background:white; border-radius:12px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:20px; color: var(--c-black);
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      cursor:pointer; transition: all .2s;
-      user-select:none;
-    }
-    .zoom-btn:hover { background: var(--c-light-grey); transform: scale(1.05); }
-
-    /* Modals */
-    .modal-overlay{
-      position:fixed; inset:0;
-      background: rgba(23,23,24,0.6);
-      backdrop-filter: blur(4px);
-      z-index:1000;
-      display:none; align-items:center; justify-content:center;
-      opacity:0; transition: opacity .3s;
-    }
-    .modal-overlay.active{ display:flex; opacity:1; }
-    .modal-card{
-      background:white; width:95%; max-width:900px; max-height:85vh;
-      border-radius:20px;
-      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
-      overflow:hidden;
-      display:flex; flex-direction:column;
-    }
-    .modal-header{ padding:20px 30px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
-    .modal-title{ font-family:'Barlow Condensed'; font-size:24px; font-weight:800; text-transform:uppercase; color: var(--c-blue); }
-    .modal-close{ font-size:28px; color:#94a3b8; cursor:pointer; transition: color .2s; line-height:1; }
-    .modal-close:hover{ color: var(--c-black); }
-
-    .library-grid{
-      padding:30px;
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap:25px;
-      overflow-y:auto;
-      background:#f8fafc;
-      flex:1;
-    }
-    .map-card{
-      background:white; border-radius:12px; overflow:hidden;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-      transition: all .3s;
-      cursor:pointer;
-      border:1px solid transparent;
-    }
-    .map-card:hover{ transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--c-orange); }
-    .map-thumb{ height:140px; background:#e2e8f0; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:40px; }
-    .map-thumb img{ width:100%; height:100%; object-fit:cover; transition: transform .5s; }
-    .map-card:hover img{ transform: scale(1.05); }
-    .map-info{ padding:15px; }
-    .map-name{ font-weight:700; font-size:13px; color: var(--c-black); margin-bottom:5px; }
-    .map-tag{ display:inline-block; padding:2px 8px; background:#e0f2fe; color: var(--c-blue); border-radius:10px; font-size:10px; font-weight:700; }
-
-    .input-mlpb{
-      width:100%;
-      padding:10px 15px;
-      border-radius:8px;
-      border:1px solid #cbd5e1;
-      font-family:'Mulish';
-      font-size:14px;
-      outline:none;
-      transition: border-color .2s;
-      background:white;
-    }
-    .input-mlpb:focus{ border-color: var(--c-blue); }
-
-    .label-mlpb{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; margin-bottom:6px; }
-
-    @media (max-width: 768px) {
-      .cockpit-container { flex-direction:column; height:auto; overflow:auto; }
-      .sidebar-left, .sidebar-right { width:100%; height:auto; }
-      .sidebar-left { border-right:none; border-bottom:1px solid #eee; }
-      .nav-column { flex-direction:row; width:100%; overflow-x:auto; padding:10px; gap:10px; }
-      .nav-btn { margin:0; flex-shrink:0; }
-      .tools-column { display:none; }
-      .map-stage { height:60vh; }
-    }
-  </style>
+        @media (max-width: 768px) {
+            .map-stage { height: 60vh; flex: none; }
+            .cockpit-container { flex-direction: column; height: auto; overflow: auto; }
+            .sidebar-left { width: 100%; position: relative; inset: auto; display: block; }
+            .glass-panel { border-radius: 0; box-shadow: none; border: none; border-bottom: 1px solid #e2e8f0; }
+            .nav-column { flex-direction: row; width: 100%; overflow-x: auto; padding: 10px; gap: 10px; }
+            #map-search-bar { top: 10px; width: 90%; }
+        }
+    </style>
 </head>
-
 <body class="flex flex-col h-full overflow-hidden">
-<header>
-  <div class="flex items-center gap-4">
-    <img src="https://static.wixstatic.com/media/dd5dab_47743b1c86024865ba19e623a3db327f~mv2.avif/v1/fill/w_224,h_60,al_c,q_80,enc_avif,quality_auto/dd5dab_47743b1c86024865ba19e623a3db327f~mv2.avif"
-         alt="Logo MLPB" class="h-10 object-contain">
-    <div>
-      <h1 class="font-black text-xl uppercase tracking-tight text-slate-800 leading-none">Map Ta Mob</h1>
-      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Diagnostic Mobilité Jeunes</span>
-    </div>
-  </div>
 
-  <div class="flex gap-3">
-    <a href="https://mlpb-tools.github.io/diagmob360/" target="_blank" class="btn-mlpb" style="text-decoration:none;">
-      <span class="text-lg">📊</span> DiagMob360
-    </a>
-    <button onclick="toggleLibrary()" class="btn-mlpb">
-      <span class="text-lg">📚</span> Bibliothèque
-    </button>
-    <button onclick="downloadMapPDF()" class="btn-mlpb" style="background:#1e293b; color:white; border:none;">
-      <span class="text-lg">📄</span> Exporter PDF
-    </button>
-  </div>
-</header>
+    <!-- HEADER TOP BAR -->
+    <header>
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center text-white font-black text-xs shadow-md">MLPB</div>
+            <div>
+                <h1 class="font-black text-xl uppercase tracking-tight text-slate-800 leading-none">Map Ta Mob</h1>
+                <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Édition Carte Interactive</span>
+            </div>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="toggleLibrary()" class="btn-mlpb">
+                <span class="text-lg">📚</span> Fonds de Carte
+            </button>
+            <button onclick="downloadMapPDF()" class="btn-mlpb btn-primary shadow-lg">
+                <span class="text-lg">📄</span> PDF
+            </button>
+        </div>
+    </header>
 
-<div class="cockpit-container">
-  <!-- Sidebar gauche -->
-  <aside class="sidebar-left">
-    <div class="nav-column">
-      <div class="nav-btn active" data-cat="lieux" onclick="switchTab('lieux', this)" title="Lieu de vie">🏠</div>
-      <div class="nav-btn" data-cat="transports" onclick="switchTab('transports', this)" title="Mobilité">🚌</div>
-      <div class="nav-btn" data-cat="pro" onclick="switchTab('pro', this)" title="Avenir">🚀</div>
-      <div class="nav-btn" data-cat="demarches" onclick="switchTab('demarches', this)" title="Démarches">🤝</div>
-      <div class="nav-btn" data-cat="loisirs" onclick="switchTab('loisirs', this)" title="Social">🎉</div>
-      <div class="nav-btn" data-cat="freins" onclick="switchTab('freins', this)" title="Obstacles">🚧</div>
-    </div>
-
-    <div class="tools-column">
-      <div id="tools-title" class="tools-header text-red-700">Lieu de vie</div>
-      <div id="tools-container" class="flex-1 overflow-y-auto py-4"></div>
-    </div>
-  </aside>
-
-  <!-- Carte -->
-  <main class="map-stage">
-    <div id="board-container">
-      <div id="map-transform-layer">
-        <div id="empty-state" class="flex flex-col items-center opacity-40 select-none pointer-events-none">
-          <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-4xl shadow-inner">🗺️</div>
-          <h2 class="font-bold text-gray-400 uppercase tracking-widest text-center">Aucune carte chargée</h2>
-          <p class="text-sm text-gray-400 mt-2">Ouvrez la bibliothèque pour commencer</p>
+    <div class="flex-1 relative flex flex-col md:flex-row">
+        
+        <!-- UI FLOTTANTE GAUCHE : OUTILS -->
+        <div class="absolute top-4 left-4 bottom-4 w-[280px] flex gap-3 pointer-events-none z-40 hidden md:flex">
+            <div class="glass-panel w-[60px] flex flex-col items-center py-4 gap-2">
+                <div class="nav-btn active" data-cat="lieux" onclick="switchTab('lieux', this)" title="Lieu de vie">🏠</div>
+                <div class="nav-btn" data-cat="transports" onclick="switchTab('transports', this)" title="Mobilité">🚌</div>
+                <div class="nav-btn" data-cat="pro" onclick="switchTab('pro', this)" title="Avenir">🚀</div>
+                <div class="nav-btn" data-cat="demarches" onclick="switchTab('demarches', this)" title="Démarches">🤝</div>
+                <div class="nav-btn" data-cat="loisirs" onclick="switchTab('loisirs', this)" title="Vie Sociale">🎉</div>
+                <div class="nav-btn" data-cat="mespass" onclick="switchTab('mespass', this)" title="Mes Pass">🎟️</div>
+            </div>
+            <div class="glass-panel flex-1 flex flex-col overflow-hidden">
+                <div id="tools-title" class="font-black uppercase text-center py-4 border-b border-slate-200/50 text-slate-800 tracking-wide text-sm">Lieu de vie</div>
+                <div id="tools-container" class="flex-1 overflow-y-auto p-3 custom-scrollbar"></div>
+            </div>
         </div>
 
-        <img id="user-map-img" class="hidden shadow-xl" src="" alt="Fond de carte">
-        <div id="drop-zone" class="absolute inset-0 z-10"></div>
-      </div>
+        <!-- MAP AREA BACKGROUND -->
+        <main class="map-stage">
+            <div id="board-container">
+                
+                <!-- RECHERCHE PAR ADRESSE -->
+                <div id="map-search-bar" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[60] flex gap-2 w-[400px] max-w-[90%] transition-all">
+                    <input type="text" id="address-input" placeholder="📍 Rechercher une ville, rue, lieu..." class="flex-1 px-4 py-3 rounded-full border border-slate-200 shadow-lg font-bold text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white/95 backdrop-blur-md text-slate-800" onkeypress="if(event.key === 'Enter') searchAddress()">
+                    <button onclick="searchAddress()" class="bg-blue-600 text-white w-11 h-11 rounded-full shadow-lg hover:bg-blue-700 hover:scale-105 transition-transform flex items-center justify-center font-bold text-lg flex-shrink-0">
+                        🔍
+                    </button>
+                </div>
 
-      <div class="zoom-controls">
-        <button class="zoom-btn" onclick="zoomIn()" title="Zoomer">+</button>
-        <button class="zoom-btn" onclick="resetZoom()" title="Réinitialiser">⟲</button>
-        <button class="zoom-btn" onclick="zoomOut()" title="Dézoomer">-</button>
-      </div>
-    </div>
-  </main>
+                <!-- LEAFLET MAP CONTAINER -->
+                <div id="leaflet-map"></div>
+                <!-- IMAGE FALLBACK (Cachée par défaut) -->
+                <img id="user-map-img" class="hidden shadow-2xl" src="" alt="Fond manuel">
+            </div>
+            
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomIn()" title="Zoomer">+</button>
+                <button class="zoom-btn" onclick="resetZoom()" title="Vue Globale">⟲</button>
+                <button class="zoom-btn" onclick="zoomOut()" title="Dézoomer">-</button>
+            </div>
+        </main>
 
-  <!-- Sidebar droite -->
-  <aside class="sidebar-right">
-    <div class="resources-header">Mes Ressources</div>
-    <div class="flex-1 overflow-y-auto w-full py-2">
-      <div id="resources-container"></div>
-    </div>
-  </aside>
-</div>
-
-<!-- Bibliothèque -->
-<div id="library-modal" class="modal-overlay">
-  <div class="modal-card">
-    <div class="modal-header">
-      <div>
-        <h2 class="modal-title">Bibliothèque de Cartes</h2>
-        <p class="text-sm text-gray-500 mt-1">Sélectionnez un fond de carte</p>
-      </div>
-      <div class="modal-close" onclick="toggleLibrary()">×</div>
+        <!-- TOAST -->
+        <div id="toast-message" class="absolute top-20 md:top-8 left-1/2 transform -translate-x-1/2 bg-slate-800/90 text-white px-4 py-2 rounded-full shadow-lg z-50 text-xs font-bold hidden backdrop-blur-sm transition-opacity duration-300 pointer-events-none"></div>
     </div>
 
-    <div class="p-6 bg-white border-b border-gray-100 flex gap-4 items-center">
-      <div class="relative flex-1">
-        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
-        <input type="text" id="searchInput" placeholder="Rechercher..." oninput="handleSearch(this.value)" class="input-mlpb pl-10">
-      </div>
-
-      <select id="mapSelect" class="input-mlpb" style="max-width:260px;" onchange="handleMapSelect(this.value)">
-        <option value="">Choisir une carte…</option>
-      </select>
-
-      <button class="btn-mlpb btn-primary" onclick="openAddMapModal()">+ Importer une carte</button>
-    </div>
-
-    <div class="library-grid" id="libraryContainer"></div>
-  </div>
-</div>
-
-<!-- Ajouter carte -->
-<div id="add-map-modal" class="modal-overlay" style="z-index: 1100;">
-  <div class="modal-card" style="max-width: 500px; height: auto;">
-    <div class="modal-header">
-      <h2 class="modal-title text-xl">Ajouter une carte</h2>
-      <div class="modal-close" onclick="closeAddMapModal()">×</div>
-    </div>
-
-    <form onsubmit="handleAddMap(event)" class="p-8">
-      <div class="mb-6">
-        <label class="label-mlpb">Nom de la carte</label>
-        <input type="text" id="newMapName" required class="input-mlpb" placeholder="Ex: Mon Quartier">
-      </div>
-
-      <div class="mb-8">
-        <label class="label-mlpb">Fichier Image</label>
-        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors relative">
-          <input type="file" id="newMapFile" accept="image/*" required class="absolute inset-0 opacity-0 cursor-pointer">
-          <span class="text-2xl block mb-2">📁</span>
-          <span class="text-sm font-bold text-gray-500">Cliquez pour déposer un fichier</span>
+    <!-- MODAL BIBLIOTHÈQUE -->
+    <div id="library-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title text-xl">Fonds de Carte</h2>
+                    <p class="text-sm text-gray-500 mt-1">Changez l'apparence de la carte interactive.</p>
+                </div>
+                <div class="modal-close" onclick="toggleLibrary()">×</div>
+            </div>
+            
+            <div class="library-grid" id="libraryContainer">
+                <!-- Rempli par JS -->
+            </div>
+            
+            <div class="p-4 bg-slate-50 border-t flex items-center justify-between">
+                <span class="text-xs text-slate-500 font-bold">Ou utilisez une image statique (Ancienne méthode) :</span>
+                <label class="btn-mlpb bg-white cursor-pointer">
+                    <span>📁</span> Importer Image
+                    <input type="file" class="hidden" accept="image/*" onchange="handleFallbackImageUpload(event)">
+                </label>
+            </div>
         </div>
-      </div>
-
-      <div class="flex justify-end gap-3">
-        <button type="button" onclick="closeAddMapModal()" class="btn-mlpb">Annuler</button>
-        <button type="submit" class="btn-mlpb btn-primary">Valider</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script>
-  // --- CONFIG CARTES (ordre logique local → national → Europe) ---
-  const config = {
-    maps: [
-      { id: 0,  name: "Pays Basque", url: "Pays-Basque.png", tag: "Local (défaut)" },
-      { id: 8,  name: "BAB", url: "bab.jpg", tag: "Local" },
-      { id: 11, name: "Hendaye – St Jean", url: "hendaye-st-jean.jpg", tag: "Local" },
-      { id: 12, name: "Hendaye transfrontalier", url: "hendaye-transfrontalier.jpg", tag: "Transfrontalier" },
-      { id: 1,  name: "Errobi – Sud Pays Basque", url: "Errobi-sud-pays-basque.jpg", tag: "Local" },
-      { id: 3,  name: "Garazi – Baigorri", url: "Garazi-Baigorri.jpg", tag: "Local" },
-      { id: 14, name: "Ustaritz – Cambo", url: "ustaritz-cambo.jpg", tag: "Local" },
-      { id: 4,  name: "Hasparren – Adour", url: "Hasparren-Adour.jpg", tag: "Local" },
-      { id: 5,  name: "Hasparren – St Palais", url: "Hasparren-stpalais.jpg", tag: "Local" },
-      { id: 13, name: "Saint-Palais – Garazi – Mauleon", url: "saint-palais-garazi-mauleon.jpg", tag: "Local" },
-      { id: 7,  name: "Adour Ouest", url: "adour-ouest.jpg", tag: "Local" },
-
-      { id: 10, name: "France", url: "france.jpg", tag: "National" },
-
-      { id: 9,  name: "Bordeaux – Toulouse – Bilbao", url: "bordeaux-toulouse-bilbao.jpg", tag: "Grande échelle" },
-      { id: 6,  name: "Navarre transfrontalière", url: "Navarre-transfrontalier.jpg", tag: "Transfrontalier" },
-      { id: 2,  name: "Europe", url: "Europe.jpg", tag: "Europe" }
-    ]
-  };
-
-  const taxonomy = {
-    lieux: [
-      { icon: "🏠", label: "Chez mes parents", class: "bubble-lieu" },
-      { icon: "🔑", label: "Chez moi", class: "bubble-lieu" },
-      { icon: "🏘️", label: "En coloc", class: "bubble-lieu" },
-      { icon: "🏢", label: "Foyer", class: "bubble-lieu" },
-      { icon: "🛏️", label: "Hébergement temporaire", class: "bubble-lieu" }
-    ],
-    transports: [
-      { icon: "🚘", label: "JE PROPOSE UN COVOIT", class: "bubble-transport", action: "openCovoitForm", highlight: true },
-      { icon: "🚶", label: "Marche", class: "bubble-transport" },
-      { icon: "🚲", label: "Vélo Perso / Pony", class: "bubble-transport" },
-      { icon: "🛴", label: "Trottinette", class: "bubble-transport" },
-      { icon: "🚌", label: "Bus / Car", class: "bubble-transport" },
-      { icon: "🚋", label: "Tram'Bus", class: "bubble-transport" },
-      { icon: "🚆", label: "Train", class: "bubble-transport" },
-      { icon: "🛵", label: "Scooter / Moto", class: "bubble-transport" },
-      { icon: "🚘", label: "Voiture Perso", class: "bubble-transport" },
-      { icon: "🚗", label: "Autopartage", class: "bubble-transport" },
-      { icon: "👍", label: "Auto-Stop", class: "bubble-transport" },
-      { icon: "🤝", label: "Covoiturage (Passager)", class: "bubble-transport" }
-    ],
-    pro: [
-      { icon: "🚀", label: "Mission Locale", class: "bubble-pro" },
-      { icon: "🏛️", label: "France Travail", class: "bubble-pro" },
-      { icon: "💼", label: "Entreprise", class: "bubble-pro", editable: true },
-      { icon: "🎓", label: "Formation", class: "bubble-pro", editable: true },
-      { icon: "🤝", label: "Volontariat", class: "bubble-pro", editable: true }
-    ],
-    demarches: [
-      { icon: "🤝", label: "Assistante Sociale", class: "bubble-admin" },
-      { icon: "🏛️", label: "CCAS", class: "bubble-admin" },
-      { icon: "🩺", label: "Médecin", class: "bubble-admin" },
-      { icon: "💶", label: "CAF", class: "bubble-admin" },
-      { icon: "📜", label: "Mairie", class: "bubble-admin" },
-      { icon: "🏦", label: "Banque", class: "bubble-admin" }
-    ],
-    loisirs: [
-      { icon: "🛒", label: "Courses", class: "bubble-loisir" },
-      { icon: "⚽", label: "Sport", class: "bubble-loisir" },
-      { icon: "🌊", label: "Nature", class: "bubble-loisir" },
-      { icon: "☕", label: "Café / Sortie", class: "bubble-loisir" },
-      { icon: "🤲", label: "Bénévolat associatif", class: "bubble-loisir", editable: true },
-      { icon: "🎭", label: "Culture", class: "bubble-loisir", editable: true }
-    ],
-    freins: [
-      { icon: "🚫", label: "Zone Blanche", class: "bubble-frein" },
-      { icon: "⏰", label: "Horaires inadaptés", class: "bubble-frein" },
-      { icon: "🤯", label: "Trop compliqué", class: "bubble-frein" },
-      { icon: "💶", label: "Coût trop élevé", class: "bubble-frein" }
-    ]
-  };
-
-  const resources = [
-    { icon: "🚲", label: "Vélo" }, { icon: "🛵", label: "Scooter" }, { icon: "🏍️", label: "Moto" },
-    { icon: "🛴", label: "Trottinette" }, { icon: "🚘", label: "Voiture" }, { icon: "🎫", label: "Carte Txik Txak" },
-    { icon: "🚆", label: "Carte SNCF" }, { icon: "🛵", label: "Permis AM" }, { icon: "🚗", label: "Permis B" },
-    { icon: "🏫", label: "Mon Auto-École" }, { icon: "📖", label: "Code de la route" }
-  ];
-
-  // --- ÉTAT ZOOM + PAN ---
-  let currentScale = 1;
-  let panX = 0;
-  let panY = 0;
-  let isPanning = false;
-  let startPanClientX = 0;
-  let startPanClientY = 0;
-  let startPanX = 0;
-  let startPanY = 0;
-
-  let currentSearch = "";
-
-  // --- INIT ---
-  window.onload = () => {
-    switchTab('lieux', document.querySelector('.nav-btn[data-cat="lieux"]'));
-    renderResources();
-    renderLibrary();
-    populateMapDropdown();
-    loadDefaultMap(); // IMPORTANT: charge Pays Basque par défaut, sans ouvrir la bibliothèque
-    setupPanHandlers();
-  };
-
-  // --- ONGLET GAUCHE ---
-  function switchTab(cat, btn) {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    const titles = { lieux: "Lieu de vie", transports: "Mobilité", pro: "Avenir Pro", demarches: "Démarches", loisirs: "Vie Sociale", freins: "Obstacles" };
-    const colors = { lieux: "var(--c-red)", transports: "var(--c-blue)", pro: "var(--c-orange)", demarches: "var(--c-purple)", loisirs: "var(--c-pink)", freins: "var(--c-black)" };
-
-    const titleEl = document.getElementById('tools-title');
-    titleEl.innerText = titles[cat];
-    titleEl.style.color = colors[cat];
-    titleEl.style.borderColor = colors[cat];
-
-    renderTools(cat, colors[cat]);
-  }
-
-  function renderTools(cat, color) {
-    const container = document.getElementById('tools-container');
-    container.innerHTML = "";
-
-    taxonomy[cat].forEach(item => {
-      const div = document.createElement('div');
-      div.className = item.highlight ? "tool-item tool-highlight" : "tool-item";
-      if (!item.highlight) div.classList.add('border-l-4');
-      div.style.borderLeftColor = color;
-
-      div.innerHTML = `<span class="text-xl">${item.icon}</span> <span>${item.label}</span>`;
-      div.onclick = () => addToMap(item);
-      container.appendChild(div);
-    });
-  }
-
-  // --- AJOUT PICTO ---
-  function addToMap(item) {
-    if (item.action === 'openCovoitForm') {
-      alert("Le module covoit n'est pas inclus dans cette version du code.");
-      return;
-    }
-
-    const el = document.createElement('div');
-    el.className = 'draggable';
-
-    el.style.left = '50%';
-    el.style.top = '50%';
-
-    const bubbleClass = item.class || 'bubble-transport';
-
-    let html = `
-      <div class="bubble-container ${bubbleClass}">
-        <span class="sticker-emoji">${item.icon}</span>
-      </div>
-      <div class="delete-btn" onclick="this.parentElement.remove()">✕</div>
-    `;
-
-    if (item.editable) {
-      html += `
-        <div class="flex flex-col items-center">
-          <span class="sticker-label">${item.label}</span>
-          <input type="text" class="sticker-input" placeholder="Précisez..." onclick="event.stopPropagation();this.focus()">
-        </div>
-      `;
-    } else {
-      html += `<span class="sticker-label">${item.label}</span>`;
-    }
-
-    el.innerHTML = html;
-    enableDrag(el);
-    document.getElementById('drop-zone').appendChild(el);
-  }
-
-  // --- RESSOURCES ---
-  function renderResources() {
-    const container = document.getElementById('resources-container');
-    container.innerHTML = "";
-    resources.forEach(item => {
-      const div = document.createElement('div');
-      div.className = "resource-item";
-      div.innerHTML = `<span class="res-icon">${item.icon}</span> ${item.label}`;
-      div.onclick = () => addToMap({ ...item, class: 'bubble-transport' });
-      container.appendChild(div);
-    });
-  }
-
-  // --- DRAG PICTOS (sur #drop-zone) ---
-  function enableDrag(el) {
-    let isDragging = false, startX, startY, initLeft, initTop;
-
-    const start = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.classList.contains('delete-btn')) return;
-      e.preventDefault();
-
-      isDragging = true;
-
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      startX = clientX;
-      startY = clientY;
-
-      const rect = el.getBoundingClientRect();
-      const parentRect = el.parentElement.getBoundingClientRect();
-
-      initLeft = (rect.left + rect.width / 2 - parentRect.left) / parentRect.width * 100;
-      initTop  = (rect.top + rect.height - parentRect.top) / parentRect.height * 100;
-
-      document.addEventListener('mousemove', move);
-      document.addEventListener('touchmove', move, { passive: false });
-      document.addEventListener('mouseup', end);
-      document.addEventListener('touchend', end);
-    };
-
-    const move = (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      const parentRect = el.parentElement.getBoundingClientRect();
-      const deltaX = (clientX - startX) / parentRect.width * 100;
-      const deltaY = (clientY - startY) / parentRect.height * 100;
-
-      el.style.left = (initLeft + deltaX) + '%';
-      el.style.top  = (initTop + deltaY) + '%';
-    };
-
-    const end = () => {
-      isDragging = false;
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('touchmove', move);
-    };
-
-    el.addEventListener('mousedown', start);
-    el.addEventListener('touchstart', start, { passive: false });
-  }
-
-  // --- PAN (cliquer-glisser) SUR LA CARTE ---
-  function setupPanHandlers() {
-    const layer = document.getElementById('map-transform-layer');
-
-    layer.addEventListener('mousedown', (e) => {
-      // Ne pas pan si on clique un pictogramme / input / delete
-      if (e.target.closest('.draggable') || e.target.closest('input') || e.target.closest('.delete-btn')) return;
-
-      isPanning = true;
-      layer.style.cursor = 'grabbing';
-
-      startPanClientX = e.clientX;
-      startPanClientY = e.clientY;
-      startPanX = panX;
-      startPanY = panY;
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!isPanning) return;
-      const dx = e.clientX - startPanClientX;
-      const dy = e.clientY - startPanClientY;
-      panX = startPanX + dx;
-      panY = startPanY + dy;
-      applyTransform();
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (!isPanning) return;
-      isPanning = false;
-      layer.style.cursor = 'grab';
-    });
-
-    // (optionnel) annuler si la souris sort
-    layer.addEventListener('mouseleave', () => {
-      if (!isPanning) return;
-      isPanning = false;
-      layer.style.cursor = 'grab';
-    });
-  }
-
-  // --- ZOOM ---
-  function zoomIn()  { currentScale = Math.min(4, currentScale + 0.1); applyTransform(); }
-  function zoomOut() { currentScale = Math.max(0.2, currentScale - 0.1); applyTransform(); }
-  function resetZoom() {
-    currentScale = 1;
-    panX = 0;
-    panY = 0;
-    applyTransform();
-  }
-
-  function applyTransform() {
-    const layer = document.getElementById('map-transform-layer');
-    layer.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
-  }
-
-  // --- BIBLIOTHÈQUE ---
-  function toggleLibrary() {
-    const m = document.getElementById('library-modal');
-    m.classList.toggle('active');
-    if (m.classList.contains('active')) {
-      renderLibrary();
-      populateMapDropdown();
-    }
-  }
-
-  function renderLibrary() {
-    const container = document.getElementById('libraryContainer');
-    container.innerHTML = "";
-    const filter = (currentSearch || "").toLowerCase();
-
-    config.maps
-      .filter(m => m.name.toLowerCase().includes(filter))
-      .forEach(m => {
-        const card = document.createElement('div');
-        card.className = "map-card";
-        card.onclick = () => loadMap(m.url, true);
-        card.title = m.name;
-
-        const img = `<img src="${m.url}" alt="${m.name}" onerror="this.onerror=null; var p=this.parentElement; p.style.fontSize='30px'; p.innerHTML='🗺️';">`;
-
-        card.innerHTML = `
-          <div class="map-thumb">${img}</div>
-          <div class="map-info">
-            <div class="map-name">${m.name}</div>
-            <span class="map-tag">${m.tag || ""}</span>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-  }
-
-  function handleSearch(val) { currentSearch = val; renderLibrary(); }
-
-  // Dropdown
-  function populateMapDropdown() {
-    const select = document.getElementById('mapSelect');
-    if (!select) return;
-
-    const currentValue = select.value;
-    select.innerHTML = `<option value="">Choisir une carte…</option>`;
-
-    config.maps.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.url;
-      opt.textContent = m.name; // NOM AFFICHÉ
-      select.appendChild(opt);
-    });
-
-    // restaure la sélection si possible
-    if (currentValue) select.value = currentValue;
-  }
-
-  function handleMapSelect(url) {
-    if (!url) return;
-    loadMap(url, true);
-  }
-
-  // --- CARTE (default sans ouvrir bibliothèque) ---
-  function loadDefaultMap() {
-    const defaultMap = config.maps.find(m => m.id === 0) || config.maps[0];
-    if (!defaultMap) return;
-    loadMap(defaultMap.url, false);
-  }
-
-  function loadMap(url, closeLibrary) {
-    const img = document.getElementById('user-map-img');
-    img.src = url;
-    img.classList.remove('hidden');
-    document.getElementById('empty-state').classList.add('hidden');
-
-    resetZoom();
-
-    if (closeLibrary) {
-      const m = document.getElementById('library-modal');
-      if (m.classList.contains('active')) m.classList.remove('active');
-    }
-  }
-
-  // --- PDF ---
-  async function downloadMapPDF() {
-    const el = document.getElementById('board-container');
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: true });
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    const pdf = new jspdf.jsPDF('landscape', 'mm', 'a4');
-    pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
-    pdf.save('Diagnostic_Mobilité.pdf');
-  }
-
-  // --- Ajout carte (dataURL) ---
-  function openAddMapModal() { document.getElementById('add-map-modal').classList.add('active'); }
-  function closeAddMapModal() { document.getElementById('add-map-modal').classList.remove('active'); }
-
-  function handleAddMap(e) {
-    e.preventDefault();
-    const file = document.getElementById('newMapFile').files[0];
-    const name = document.getElementById('newMapName').value;
-
-    if (file && name) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        config.maps.unshift({ id: Date.now(), name, url: ev.target.result, tag: "Perso" });
-        renderLibrary();
-        populateMapDropdown();
-        closeAddMapModal();
-        loadMap(ev.target.result, true);
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-</script>
+    </div>
+
+    <script>
+        // --- DATA & CONFIG ---
+        let map;
+        let markersMap = {};
+        let markerIdCounter = 0;
+        let currentSearch = "";
+
+        const colorMap = {
+            lieu: "var(--c-red)", transport: "var(--c-blue)", pro: "var(--c-orange)",
+            admin: "var(--c-purple)", loisir: "var(--c-pink)", mespass: "var(--c-black)"
+        };
+
+        const taxonomy = {
+            lieux: [ 
+                { icon: "🏠", label: "Maison", type: "lieu" }, 
+                { icon: "🔑", label: "Chez moi", type: "lieu" }, 
+                { icon: "🏘️", label: "Coloc", type: "lieu" }, 
+                { icon: "🏢", label: "Foyer", type: "lieu" }, 
+                { icon: "🛏️", label: "Hébergé", type: "lieu" },
+                { icon: "➕", label: "Autre Lieu", type: "lieu", editable: true, placeholder: "Précisez..." }
+            ],
+            transports: [
+                { icon: "🚶", label: "Marche", type: "transport" }, 
+                { icon: "🚲", label: "Vélo", type: "transport" },
+                { icon: "🛴", label: "Trottinette", type: "transport" }, 
+                { icon: "🚌", label: "Bus/Car", type: "transport" },
+                { icon: "🚋", label: "Tram'Bus", type: "transport" }, 
+                { icon: "🚆", label: "Train", type: "transport" },
+                { icon: "🛵", label: "Scooter", type: "transport" }, 
+                { icon: "🚘", label: "Voiture", type: "transport" },
+                { icon: "👍", label: "Auto-Stop", type: "transport" }, 
+                { icon: "🤝", label: "Covoit", type: "transport" },
+                { icon: "➕", label: "Autre Moyen", type: "transport", editable: true, placeholder: "Précisez..." }
+            ],
+            pro: [ 
+                { icon: "🚀", label: "Mission Locale", type: "pro" }, 
+                { icon: "🏛️", label: "France Travail", type: "pro" },
+                { icon: "💼", label: "Entreprise", type: "pro", editable: true, placeholder: "Où ?" }, 
+                { icon: "🎓", label: "Formation", type: "pro", editable: true, placeholder: "École ?" },
+                { icon: "🤝", label: "Volontariat / Bénévolat", type: "pro", editable: true, placeholder: "Où ?" },
+                { icon: "➕", label: "Autre Avenir", type: "pro", editable: true, placeholder: "Précisez..." }
+            ],
+            demarches: [ 
+                { icon: "🤝", label: "Asst. Sociale", type: "admin" }, 
+                { icon: "🩺", label: "Médecin/CMP", type: "admin" },
+                { icon: "➕", label: "Autre Démarche", type: "admin", editable: true, placeholder: "Précisez..." }
+            ],
+            loisirs: [ 
+                { icon: "🛒", label: "Courses", type: "loisir" }, 
+                { icon: "⚽", label: "Sport", type: "loisir" },
+                { icon: "💖", label: "Lieux que j'aime", type: "loisir", editable: true, placeholder: "Lieu..." }, 
+                { icon: "☕", label: "Sortie", type: "loisir" },
+                { icon: "➕", label: "Autre Loisir", type: "loisir", editable: true, placeholder: "Précisez..." }
+            ],
+            mespass: [ 
+                { icon: "🎫", label: "Carte Txik Txak", type: "mespass" }, 
+                { icon: "🚆", label: "Carte SNCF", type: "mespass" },
+                { icon: "🛵", label: "Permis AM", type: "mespass" }, 
+                { icon: "🚗", label: "Permis B", type: "mespass" },
+                { icon: "➕", label: "Autre Pass", type: "mespass", editable: true, placeholder: "Précisez..." }
+            ]
+        };
+
+        const tileLayers = {
+            osm: { name: "Plan Standard (OSM)", url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", attribution: "© OpenStreetMap France", icon: "🗺️" },
+            carto: { name: "Plan Clair (Épuré)", url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "© OpenStreetMap, © CartoDB", icon: "⚪" },
+            satellite: { name: "Vue Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attribution: "Tiles © Esri", icon: "🌍" },
+            topo: { name: "Relief & Topo", url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attribution: "© OpenTopoMap", icon: "⛰️" }
+        };
+
+        let currentTileLayer;
+
+        // --- INIT LEAFLET ---
+        function initLeafletMap() {
+            map = L.map('leaflet-map', { 
+                zoomControl: false, 
+                attributionControl: false,
+                wheelPxPerZoomLevel: 100, 
+                zoomAnimation: true
+            }).setView([43.483151, -1.532370], 12);
+
+            L.control.zoom({ position: 'bottomleft' }).addTo(map);
+            document.querySelector('.leaflet-control-zoom').style.display = 'none';
+
+            currentTileLayer = L.tileLayer(tileLayers.osm.url, {
+                maxZoom: 19,
+                crossOrigin: true 
+            }).addTo(map);
+        }
+
+        window.onload = () => {
+            initLeafletMap();
+            switchTab('lieux', document.querySelector('.nav-btn[data-cat="lieux"]'));
+            renderLibrary();
+        };
+
+        // --- NOUVEAU : RECHERCHE D'ADRESSE ---
+        async function searchAddress() {
+            if (document.getElementById('leaflet-map').style.display === 'none') {
+                showToast("⚠️", "La recherche nécessite la carte interactive.");
+                return;
+            }
+
+            const input = document.getElementById('address-input');
+            const query = input.value.trim();
+            if (!query) return;
+
+            const btn = input.nextElementSibling;
+            const oldContent = btn.innerHTML;
+            btn.innerHTML = "⏳"; 
+
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Pays Basque')}&limit=1`);
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    map.flyTo([lat, lon], 15, { duration: 1.5 });
+                    showToast("📍", "Lieu trouvé !");
+                } else {
+                    const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+                    const data2 = await res2.json();
+                    if (data2 && data2.length > 0) {
+                        const lat = parseFloat(data2[0].lat);
+                        const lon = parseFloat(data2[0].lon);
+                        map.flyTo([lat, lon], 14, { duration: 1.5 });
+                        showToast("📍", "Lieu trouvé !");
+                    } else {
+                        showToast("⚠️", "Adresse introuvable.");
+                    }
+                }
+            } catch (e) {
+                showToast("❌", "Erreur de recherche.");
+            } finally {
+                btn.innerHTML = oldContent;
+            }
+        }
+
+        // --- UI METIER ---
+        function switchTab(cat, btn) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const titles = { lieux: "Lieu de vie", transports: "Mobilité", pro: "Avenir Pro", demarches: "Démarches", loisirs: "Vie Sociale", mespass: "Mes Pass" };
+            
+            const titleEl = document.getElementById('tools-title');
+            titleEl.innerText = titles[cat];
+            titleEl.style.color = colorMap[cat] || "var(--c-black)";
+            
+            renderTools(cat, colorMap[cat] || "var(--c-black)");
+        }
+
+        function renderTools(cat, color) {
+            const container = document.getElementById('tools-container');
+            container.innerHTML = "";
+            taxonomy[cat].forEach(item => {
+                const div = document.createElement('div');
+                div.className = item.highlight ? "tool-item tool-highlight" : "tool-item";
+                if(!item.highlight) div.classList.add('border-l-4');
+                div.style.borderLeftColor = color;
+                div.innerHTML = `<span class="text-xl w-6 text-center">${item.icon}</span> <span class="truncate">${item.label}</span>`;
+                div.onclick = () => addLeafletMarker(item);
+                container.appendChild(div);
+            });
+        }
+
+        // --- LEAFLET MARKERS ---
+        function addLeafletMarker(item) {
+            if (document.getElementById('leaflet-map').style.display === 'none') {
+                showToast("⚠️", "Passez en carte interactive pour placer des repères.");
+                return;
+            }
+
+            const id = 'marker-' + markerIdCounter++;
+            let bubbleClass = `bubble-${item.type}` || 'bubble-transport';
+            
+            let html = `
+                <div class="group relative flex flex-col items-center justify-center pointer-events-auto" id="${id}">
+                    <div class="bubble-container ${bubbleClass}">
+                        <span class="sticker-emoji">${item.icon}</span>
+                    </div>
+                    <div class="delete-btn opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer z-50 border border-white" onclick="removeMarker('${id}')">✕</div>
+            `;
+            
+            if(item.editable) {
+                html += `<input type="text" class="sticker-input mt-1" placeholder="${item.placeholder || 'Précisez...'}" onmousedown="L.DomEvent.disableClickPropagation(this); L.DomEvent.stopPropagation(event);" onclick="this.focus();">`;
+            } else {
+                html += `<div class="sticker-label">${item.label}</div>`;
+            }
+            html += `</div>`;
+
+            const icon = L.divIcon({
+                className: 'custom-div-icon',
+                html: html,
+                iconSize: [40, 60], 
+                iconAnchor: [20, 30] 
+            });
+
+            const marker = L.marker(map.getCenter(), {
+                icon: icon,
+                draggable: true,
+                autoPan: true
+            }).addTo(map);
+
+            marker.on('add', function() {
+                const el = document.getElementById(id);
+                if (el) {
+                    L.DomEvent.disableClickPropagation(el);
+                    L.DomEvent.disableScrollPropagation(el);
+                }
+            });
+
+            markersMap[id] = marker;
+            showToast(item.icon, "Glissez-le à la bonne adresse !");
+        }
+
+        function removeMarker(id) {
+            if(markersMap[id]) {
+                map.removeLayer(markersMap[id]);
+                delete markersMap[id];
+            }
+        }
+
+        // --- ZOOM BUTTONS (Liés à Leaflet) ---
+        function zoomIn() { map.zoomIn(); }
+        function zoomOut() { map.zoomOut(); }
+        function resetZoom() { 
+            map.flyTo([43.483, -1.533], 12, { duration: 1.0 }); 
+        }
+
+        // --- BIBLIOTHEQUE (Fonds Leaflet) ---
+        function toggleLibrary() { 
+            const m = document.getElementById('library-modal');
+            m.classList.toggle('active');
+        }
+
+        function renderLibrary() {
+            const container = document.getElementById('libraryContainer');
+            container.innerHTML = "";
+            
+            for (const [key, layerData] of Object.entries(tileLayers)) {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:border-blue-500 hover:shadow-md transition-all text-center";
+                card.onclick = () => changeMapStyle(key);
+                
+                card.innerHTML = `
+                    <div class="h-24 bg-slate-100 flex flex-col items-center justify-center text-slate-500 border-b border-slate-100">
+                        <span class="text-4xl mb-1">${layerData.icon}</span>
+                    </div>
+                    <div class="p-3">
+                        <div class="font-bold text-xs text-slate-800 leading-tight">${layerData.name}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function changeMapStyle(key) {
+            const layerData = tileLayers[key];
+            if(currentTileLayer) map.removeLayer(currentTileLayer);
+            
+            currentTileLayer = L.tileLayer(layerData.url, {
+                maxZoom: 19, crossOrigin: true
+            }).addTo(map);
+            
+            document.getElementById('leaflet-map').style.display = 'block';
+            document.getElementById('user-map-img').classList.add('hidden');
+            document.getElementById('map-search-bar').style.display = 'flex';
+            
+            toggleLibrary();
+            showToast("🗺️", "Style de carte appliqué");
+        }
+
+        function handleFallbackImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    document.getElementById('leaflet-map').style.display = 'none';
+                    document.getElementById('map-search-bar').style.display = 'none';
+                    
+                    const img = document.getElementById('user-map-img');
+                    img.src = ev.target.result;
+                    img.classList.remove('hidden');
+                    
+                    toggleLibrary();
+                    showToast("⚠️", "Mode image statique activé. Recherche indisponible.");
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // --- PDF ---
+        async function downloadMapPDF() {
+            showToast("⏳", "Export en cours...");
+            
+            const overlays = document.querySelectorAll('.zoom-controls, .leaflet-control-container, #map-search-bar');
+            overlays.forEach(o => { if(o) o.style.display = 'none'; });
+
+            try {
+                const el = document.getElementById('board-container');
+                const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#e2e8f0' });
+                
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                const pdf = new jspdf.jsPDF('landscape', 'mm', 'a4');
+                pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
+                pdf.save('Diagnostic_MapTaMob.pdf');
+                showToast("✅", "PDF généré !");
+            } catch(e) {
+                console.error(e);
+                showToast("⚠️", "Erreur PDF");
+            } finally {
+                overlays.forEach(o => { if(o) o.style.display = ''; });
+            }
+        }
+
+        function showToast(i,m) { 
+            const t = document.getElementById('toast-message'); 
+            t.innerHTML = `<span class="text-lg">${i}</span> <span>${m}</span>`; 
+            t.classList.remove('hidden'); t.classList.remove('opacity-0');
+            setTimeout(() => { t.classList.add('opacity-0'); setTimeout(()=>t.classList.add('hidden'),300); }, 2500); 
+        }
+    </script>
 </body>
 </html>
-
